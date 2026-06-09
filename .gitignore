@@ -1,0 +1,11 @@
+# MATLAB
+*.asv
+
+
+#Python
+*__pycache__*
+*.venv
+
+# Export folde
+
+Export/*
