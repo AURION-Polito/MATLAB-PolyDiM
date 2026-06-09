@@ -22,7 +22,7 @@ source .venv/bin/activate
 4. Install the required dependencies.
 
 ```bash
-source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 5. Deactivate the virtual environment.
