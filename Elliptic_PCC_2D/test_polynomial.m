@@ -19,6 +19,7 @@ info_dirichlet.marker = py.int(1);
 boundary_info = py.dict();
 
 boundary_info{py.int(0)} = info_internal;
+
 boundary_info{py.int(1)} = info_dirichlet;
 boundary_info{py.int(2)} = info_dirichlet;
 boundary_info{py.int(3)} = info_dirichlet;

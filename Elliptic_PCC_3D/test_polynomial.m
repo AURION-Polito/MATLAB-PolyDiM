@@ -1,6 +1,6 @@
 pde_domain = polydim.pde_tools.mesh.pde_mesh_utilities.PDE_Domain_3D();
 
-% set verticse
+% set vertices
 pde_domain.vertices = [0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0;
                         0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0;
                         0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0];
@@ -28,8 +28,10 @@ info_dirichlet.marker = py.int(1);
 
 boundary_info = py.dict();
 
+% marker for internal
 boundary_info{py.int(0)} = info_internal;
 
+% boundary conditions for vertices
 boundary_info{py.int(1)} = info_dirichlet;
 boundary_info{py.int(2)} = info_dirichlet;
 boundary_info{py.int(3)} = info_dirichlet;
@@ -39,6 +41,7 @@ boundary_info{py.int(6)} = info_dirichlet;
 boundary_info{py.int(7)} = info_dirichlet;
 boundary_info{py.int(8)} = info_dirichlet;
 
+% boundary conditions for edges
 boundary_info{py.int(9)} = info_dirichlet;
 boundary_info{py.int(10)} = info_dirichlet;
 boundary_info{py.int(11)} = info_dirichlet;
@@ -52,6 +55,7 @@ boundary_info{py.int(18)} = info_dirichlet;
 boundary_info{py.int(19)} = info_dirichlet;
 boundary_info{py.int(20)} = info_dirichlet;
 
+% boundary conditions for faces
 boundary_info{py.int(21)} = info_neumann_bottom;
 boundary_info{py.int(22)} = info_dirichlet;
 boundary_info{py.int(23)} = info_dirichlet;

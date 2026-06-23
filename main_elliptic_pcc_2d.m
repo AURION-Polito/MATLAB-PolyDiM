@@ -29,6 +29,7 @@ mesh_utilities = gedim.MeshUtilities();
 vtk_utilities = export_vtk_utilities.ExportVTKUtilities();
 
 %% PDE Data
+% Change the test to run other kind of problems
 test_polynomial
 
 %% Convergence test
