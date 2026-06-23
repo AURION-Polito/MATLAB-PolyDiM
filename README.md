@@ -2,7 +2,7 @@
 
 This MATLAB code provides a collection of examples demonstrating how to use *PyPolyDim*, the Python binding of the C++ **PolyDiM&GeDiM** library. Through a series of use cases, it illustrates how to access the library's functionality from MATLAB and serves as a reference for its main features and typical workflows.
 
-More details about this librarty can be found at **[PolyDiM website](https://your-website-url.com)**.
+More details about this librarty can be found at **[PolyDiM website](https://www.polydim.it/)**.
 
 ## Installation
 
