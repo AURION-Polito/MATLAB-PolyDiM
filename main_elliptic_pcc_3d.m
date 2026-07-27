@@ -3,7 +3,10 @@ clc
 clear
 close all
 
-addpath('./Elliptic_PCC_3D/')
+currentPath = pwd;
+file_path = fileparts(mfilename('fullpath'));
+
+addpath(file_path + "/Elliptic_PCC_3D/")
 
 setup_pypolydim
 
@@ -12,8 +15,8 @@ setup_pypolydim
 %% Arguments
 
 % Export Path 
-[~, ~, ~] = mkdir('./Export');
-export_path = './Export/Elliptic_PCC_3D';
+[~, ~, ~] = mkdir(currentPath + "/Export");
+export_path = currentPath + "/Export/Elliptic_PCC_3D";
 [~, ~, ~] = mkdir(export_path);
 
 % Mesh 3D generator type, 0 - Tetrahedral; 1 - Minimal; 2 - Polyhedral; 3 - OVMImporter; 4 - VtkImporter; 5 - CsvImporter; 6 - Cubic 
@@ -52,7 +55,7 @@ errors = [];
 
 for ref=1:length(max_relative_volumes)
     
-    %% Create Mesh
+    disp('Create Mesh...')
 
     max_relative_volume = py.float(max_relative_volumes(ref));
     [mesh, mesh_data, mesh_geometric_data] = create_mesh(gedim, polydim, geometry_utilities, mesh_utilities, mesh_type, max_relative_volume, import_path, pde_domain);
@@ -63,7 +66,7 @@ for ref=1:length(max_relative_volumes)
     disp("Export mesh in: " + export_mesh_path)
 
 
-    %% Discrete Local Space
+    disp('Discrete Local Space...')
 
     reference_element_data = polydim.pde_tools.local_space_pcc_3_d.create_reference_element(method_type, method_order);
     mesh_connectivity_data = polydim.pde_tools.mesh.MeshMatricesDAO_mesh_connectivity_data(mesh);
@@ -72,7 +75,7 @@ for ref=1:length(max_relative_volumes)
     do_fs_data = dof_manager.create_do_fs_3_d(mesh_do_fs_info, mesh_connectivity_data);
     do_fs_data_indices = dof_manager.compute_cells_do_fs_indices(do_fs_data, py.int(3));
 
-    %% Assemble
+    disp('Assemble...')
 
     num_cell3D = int64(mesh.cell3_d_total_number());
     num_dofs = int64(do_fs_data.number_do_fs);
@@ -156,8 +159,7 @@ for ref=1:length(max_relative_volumes)
     global_rhs = global_rhs - dirichlet_matrix_a * solution_dirichlet;
     solution = global_matrix_a \ global_rhs;
 
-    %% Compute Errors
-
+    disp('Compute Errors...')
 
     residual_norm = 0.0;
 
@@ -233,7 +235,7 @@ for ref=1:length(max_relative_volumes)
 
     errors = [errors; table(num_cell3D, num_dofs, num_strongs, mesh_size, error_l2, error_h1, norm_l2, norm_h1, residual_norm)];
 
-    %% Export Solution
+    disp('Export Solution...')
     cell0_ds_numeric = zeros(numCell0D, 1);
     cell0_ds_exact = exact_solution(cell0_ds_coordinates)';
 
@@ -252,13 +254,13 @@ for ref=1:length(max_relative_volumes)
         end
     end
     
-    file_name = strcat([export_path, '/Solution_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref)]);
+    file_name = strcat([char(export_path), '/Solution_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref)]);
     vtk_utilities.export_solution_3(file_name, ...
         mesh, py.numpy.squeeze(py.numpy.array(cell0_ds_numeric, pyargs('dtype', py.numpy.float64))), py.numpy.squeeze(py.numpy.array(cell0_ds_exact, pyargs('dtype', py.numpy.float64))), ...
         py.numpy.squeeze(py.numpy.array(cell3_ds_error_l2, pyargs('dtype', py.numpy.float64))), ...
         py.numpy.squeeze(py.numpy.array(cell3_ds_error_h1, pyargs('dtype', py.numpy.float64))));
 
-    disp(strcat(['Export solution in: ', file_name]))
+    disp(strcat(['Export Solution in: ', file_name, '.vtu']))
 
 end
 
@@ -268,7 +270,8 @@ fprintf('\n');
 fprintf('\n');
 
 disp(errors)
-writetable(errors,strcat([export_path, '/Errors_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref), '.csv']),'Delimiter',';'); 
+writetable(errors,strcat([char(export_path), '/Errors_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref), '.csv']),'Delimiter',';'); 
+disp(strcat(['Export Errors in: ', file_name]))
 
 alpha = polyfit(log(errors.mesh_size), log(errors.error_l2), 1);
 beta = polyfit(log(errors.mesh_size), log(errors.error_h1), 1);
@@ -284,4 +287,4 @@ fprintf('=========================================\n\n');
 
 %profile viewer
 
-rmpath('Elliptic_PCC_3D/')
+rmpath(file_path + "/Elliptic_PCC_3D/")

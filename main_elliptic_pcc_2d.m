@@ -3,7 +3,10 @@ clc
 clear
 close all
 
-addpath('./Elliptic_PCC_2D/')
+currentPath = pwd;
+file_path = fileparts(mfilename('fullpath'));
+
+addpath(file_path + "/Elliptic_PCC_2D/")
 
 setup_pypolydim
 
@@ -12,8 +15,8 @@ setup_pypolydim
 %% Arguments
 
 % Export Path
-[~, ~, ~] = mkdir('./Export');
-export_path = './Export/Elliptic_PCC_2D';
+[~, ~, ~] = mkdir(currentPath + "/Export");
+export_path = currentPath + "/Export/Elliptic_PCC_2D";
 [~, ~, ~] = mkdir(export_path);
 
 % Mesh type, 0 - Triangular; 1 - Minimal; 2 - Polygonal; 3 - OFF Importer; 4 - CsvImporter (; separator); 5 - Squared; 6 - RandomDistorted 
@@ -54,8 +57,7 @@ errors = [];
 
 for ref=1:length(max_relative_areas)
     
-    %% Create Mesh
-
+    disp('Create Mesh...')
     max_relative_area = py.float(max_relative_areas(ref));
     [mesh, mesh_data, mesh_geometric_data] = create_mesh(gedim, polydim, geometry_utilities, mesh_utilities, mesh_type, max_relative_area, import_path, pde_domain);
 
@@ -65,8 +67,7 @@ for ref=1:length(max_relative_areas)
     disp("Export mesh in: " + export_mesh_path)
 
 
-    %% Discrete Local Space
-
+    disp('Create Discrete Local Space...')
     reference_element_data = polydim.pde_tools.local_space_pcc_2_d.create_reference_element(method_type, method_order);
     mesh_connectivity_data = polydim.pde_tools.mesh.MeshMatricesDAO_mesh_connectivity_data(mesh);
     dof_manager = polydim.pde_tools.do_fs.DOFsManager();
@@ -74,8 +75,7 @@ for ref=1:length(max_relative_areas)
     do_fs_data = dof_manager.create_do_fs_2_d(mesh_do_fs_info, mesh_connectivity_data);
     do_fs_data_indices = dof_manager.compute_cells_do_fs_indices(do_fs_data, py.int(2));
 
-    %% Assemble
-
+    disp('Assemble...')
     num_cell2D = int64(mesh.cell2_d_total_number());
     num_dofs = int64(do_fs_data.number_do_fs);
     num_strongs = int64(do_fs_data.number_strongs);
@@ -153,13 +153,12 @@ for ref=1:length(max_relative_areas)
 
     global_matrix_a = sparse(vertcat(global_lhs_rows{:}), vertcat(global_lhs_cols{:}), vertcat(global_lhs_values{:}), num_dofs, num_dofs);
     dirichlet_matrix_a = sparse(vertcat(dirichlet_lhs_rows{:}), vertcat(dirichlet_lhs_cols{:}), vertcat(dirichlet_lhs_values{:}), num_dofs, num_strongs);
-
+    
+    disp('Solve...')
     global_rhs = global_rhs - dirichlet_matrix_a * solution_dirichlet;
     solution = global_matrix_a \ global_rhs;
 
-    %% Compute Errors
-
-
+    disp('Compute Errors...')
     residual_norm = 0.0;
 
     if do_fs_data.number_do_fs > 0
@@ -231,7 +230,7 @@ for ref=1:length(max_relative_areas)
 
     errors = [errors; table(num_cell2D, num_dofs, num_strongs, mesh_size, error_l2, error_h1, norm_l2, norm_h1, residual_norm)];
 
-    %% Export Solution
+    disp('Export Solution...')
     cell0_ds_numeric = zeros(numCell0D, 1);
     cell0_ds_exact = exact_solution(cell0_ds_coordinates)';
 
@@ -249,13 +248,13 @@ for ref=1:length(max_relative_areas)
             error("Unknown DOF Type");
         end
     end
-    file_name = strcat([export_path, '/Solution_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref)]);
+    file_name = strcat([char(export_path), '/Solution_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref)]);
     vtk_utilities.export_solution_2(file_name, ...
         mesh, py.numpy.squeeze(py.numpy.array(cell0_ds_numeric, pyargs('dtype', py.numpy.float64))), py.numpy.squeeze(py.numpy.array(cell0_ds_exact, pyargs('dtype', py.numpy.float64))), ...
         py.numpy.squeeze(py.numpy.array(cell2_ds_error_l2, pyargs('dtype', py.numpy.float64))), ...
         py.numpy.squeeze(py.numpy.array(cell2_ds_error_h1, pyargs('dtype', py.numpy.float64))));
 
-    disp(strcat(['Export solution in: ', file_name]))
+    disp(strcat(['Export solution in: ', file_name, '.vtu']))
 
 end
 
@@ -263,7 +262,9 @@ format short e
 fprintf('\n');
 fprintf('\n');
 disp(errors)
-writetable(errors,strcat([export_path, '/Errors_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref), '.csv']),'Delimiter',';'); 
+file_name = strcat([char(export_path), '/Errors_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref), '.csv']);
+writetable(errors, file_name,'Delimiter',';'); 
+disp(strcat(['Export errors in: ', file_name]))
 
 alpha = polyfit(log(errors.mesh_size), log(errors.error_l2), 1);
 beta = polyfit(log(errors.mesh_size), log(errors.error_h1), 1);
@@ -280,4 +281,4 @@ fprintf('=========================================\n\n');
 
 %profile viewer
 
-rmpath('Elliptic_PCC_2D/')
+rmpath(file_path + "/Elliptic_PCC_2D/")
