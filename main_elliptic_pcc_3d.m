@@ -11,12 +11,16 @@ setup_pypolydim
 
 %% Arguments
 
+% Export Path 
 [~, ~, ~] = mkdir('./Export');
 export_path = './Export/Elliptic_PCC_3D';
 [~, ~, ~] = mkdir(export_path);
 
+% Mesh 3D generator type, 0 - Tetrahedral; 1 - Minimal; 2 - Polyhedral; 3 - OVMImporter; 4 - VtkImporter; 5 - CsvImporter; 6 - Cubic 
 mesh_type = pd.polydim.pde_tools.mesh.pde_mesh_utilities.MeshGenerator_Types_3D.cubic;
+% Method Type, 0 - FEM_PCC; 1 - Vem; 2 - Vem_Inertia; 3 - Vem_Ortho 
 method_type = polydim.pde_tools.local_space_pcc_3_d.MethodTypes.vem_pcc;
+% Method order >= 1
 method_order = py.int(2);
 import_path = './'; % Mesh import path
 
@@ -28,6 +32,15 @@ geometry_utilities = gedim.GeometryUtilities(geometry_utilities_config);
 
 mesh_utilities = gedim.MeshUtilities();
 vtk_utilities = export_vtk_utilities.ExportVTKUtilities();
+
+fprintf('\n');
+fprintf('=========================================\n');
+fprintf('      SIMULATION SETTINGS SUMMARY\n');
+fprintf('=========================================\n');
+fprintf(' Mesh Type   : %s\n', string(mesh_type.name));
+fprintf(' Method Order: %d\n', method_order);
+fprintf(' Method Type : %s\n', string(method_type.name));
+fprintf('=========================================\n\n');
 
 %% PDE Data
 test_polynomial
@@ -47,6 +60,7 @@ for ref=1:length(max_relative_volumes)
     export_mesh_path = export_path + "/Mesh" + int2str(ref);
     [~, ~, ~] = mkdir(export_mesh_path);
     vtk_utilities.export_mesh(export_mesh_path, mesh)
+    disp("Export mesh in: " + export_mesh_path)
 
 
     %% Discrete Local Space
@@ -237,15 +251,21 @@ for ref=1:length(max_relative_volumes)
             error("Unknown DOF Type");
         end
     end
-
-    vtk_utilities.export_solution_3(strcat([export_path, '/Solution_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref)]), ...
+    
+    file_name = strcat([export_path, '/Solution_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref)]);
+    vtk_utilities.export_solution_3(file_name, ...
         mesh, py.numpy.squeeze(py.numpy.array(cell0_ds_numeric, pyargs('dtype', py.numpy.float64))), py.numpy.squeeze(py.numpy.array(cell0_ds_exact, pyargs('dtype', py.numpy.float64))), ...
         py.numpy.squeeze(py.numpy.array(cell3_ds_error_l2, pyargs('dtype', py.numpy.float64))), ...
         py.numpy.squeeze(py.numpy.array(cell3_ds_error_h1, pyargs('dtype', py.numpy.float64))));
 
+    disp(strcat(['Export solution in: ', file_name]))
+
 end
 
 format short e
+
+fprintf('\n');
+fprintf('\n');
 
 disp(errors)
 writetable(errors,strcat([export_path, '/Errors_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref), '.csv']),'Delimiter',';'); 
@@ -253,8 +273,14 @@ writetable(errors,strcat([export_path, '/Errors_', int2str(int64(method_type.val
 alpha = polyfit(log(errors.mesh_size), log(errors.error_l2), 1);
 beta = polyfit(log(errors.mesh_size), log(errors.error_h1), 1);
 
-disp('Convergence rates:')
-disp([alpha(1) beta(1)])
+fprintf('\n');
+fprintf('=========================================\n');
+fprintf('      Convergence rates\n');
+fprintf('=========================================\n');
+fprintf(' L2 : %.4e\n', alpha(1));
+fprintf(' H1 : %.4e\n', beta(1));
+fprintf('=========================================\n\n');
+
 
 %profile viewer
 
