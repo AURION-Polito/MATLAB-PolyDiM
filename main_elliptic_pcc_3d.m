@@ -20,9 +20,9 @@ export_path = currentPath + "/Export/Elliptic_PCC_3D";
 [~, ~, ~] = mkdir(export_path);
 
 % Mesh 3D generator type, 0 - Tetrahedral; 1 - Minimal; 2 - Polyhedral; 3 - OVMImporter; 4 - VtkImporter; 5 - CsvImporter; 6 - Cubic 
-mesh_type = pd.polydim.pde_tools.mesh.pde_mesh_utilities.MeshGenerator_Types_3D.cubic;
+mesh_type = MeshGenerator_Types_3D.cubic;
 % Method Type, 0 - FEM_PCC; 1 - Vem; 2 - Vem_Inertia; 3 - Vem_Ortho 
-method_type = polydim.pde_tools.local_space_pcc_3_d.MethodTypes.vem_pcc;
+method_type = local_space_pcc_3_d.MethodTypes.vem_pcc;
 % Method order >= 1
 method_order = py.int(2);
 import_path = './'; % Mesh import path
@@ -32,9 +32,6 @@ geometry_utilities_config.tolerance1_d = 1.0e-12;
 geometry_utilities_config.tolerance2_d = 1.0e-14;
 geometry_utilities_config.tolerance2_d = 1.0e-15;
 geometry_utilities = gedim.GeometryUtilities(geometry_utilities_config);
-
-mesh_utilities = gedim.MeshUtilities();
-vtk_utilities = export_vtk_utilities.ExportVTKUtilities();
 
 fprintf('\n');
 fprintf('=========================================\n');
@@ -58,20 +55,20 @@ for ref=1:length(max_relative_volumes)
     disp('Create Mesh...')
 
     max_relative_volume = py.float(max_relative_volumes(ref));
-    [mesh, mesh_data, mesh_geometric_data] = create_mesh(gedim, polydim, geometry_utilities, mesh_utilities, mesh_type, max_relative_volume, import_path, pde_domain);
+    [mesh, mesh_data, mesh_geometric_data] = create_mesh(gedim, polydim, geometry_utilities, mesh_type, max_relative_volume, import_path, pde_domain);
 
     export_mesh_path = export_path + "/Mesh" + int2str(ref);
     [~, ~, ~] = mkdir(export_mesh_path);
-    vtk_utilities.export_mesh(export_mesh_path, mesh)
+    ExportVTKUtilities.export_mesh(export_mesh_path, mesh)
     disp("Export mesh in: " + export_mesh_path)
 
 
     disp('Discrete Local Space...')
 
-    reference_element_data = polydim.pde_tools.local_space_pcc_3_d.create_reference_element(method_type, method_order);
+    reference_element_data = local_space_pcc_3_d.create_reference_element(method_type, method_order);
     mesh_connectivity_data = polydim.pde_tools.mesh.MeshMatricesDAO_mesh_connectivity_data(mesh);
     dof_manager = polydim.pde_tools.do_fs.DOFsManager();
-    mesh_do_fs_info = polydim.pde_tools.local_space_pcc_3_d.set_mesh_do_fs_info(reference_element_data, mesh, boundary_info);
+    mesh_do_fs_info = local_space_pcc_3_d.set_mesh_do_fs_info(reference_element_data, mesh, boundary_info);
     do_fs_data = dof_manager.create_do_fs_3_d(mesh_do_fs_info, mesh_connectivity_data);
     do_fs_data_indices = dof_manager.compute_cells_do_fs_indices(do_fs_data, py.int(3));
 
@@ -100,25 +97,25 @@ for ref=1:length(max_relative_volumes)
 
         cell_index = py.int(c - 1);
 
-        local_space_data = polydim.pde_tools.local_space_pcc_3_d.create_local_space(geometry_utilities_config.tolerance1_d, geometry_utilities_config.tolerance2_d, ...
+        local_space_data = local_space_pcc_3_d.create_local_space(geometry_utilities_config.tolerance1_d, geometry_utilities_config.tolerance2_d, ...
             geometry_utilities_config.tolerance3_d, mesh_geometric_data, cell_index, reference_element_data);
 
-        basis_functions_values = polydim.pde_tools.local_space_pcc_3_d.basis_functions_values(reference_element_data, local_space_data);
-        basis_functions_derivative_values = polydim.pde_tools.local_space_pcc_3_d.basis_functions_derivative_values(reference_element_data, local_space_data);
+        basis_functions_values = local_space_pcc_3_d.basis_functions_values(reference_element_data, local_space_data);
+        basis_functions_derivative_values = local_space_pcc_3_d.basis_functions_derivative_values(reference_element_data, local_space_data);
 
-        cell3_d_internal_quadrature = polydim.pde_tools.local_space_pcc_3_d.internal_quadrature(reference_element_data, local_space_data);
+        cell3_d_internal_quadrature = local_space_pcc_3_d.internal_quadrature(reference_element_data, local_space_data);
         weights = cell3_d_internal_quadrature.weights;
         points = double(cell3_d_internal_quadrature.points);
 
         diffusion_term_values = diffusion_term(points);
         k_max = max(abs(diffusion_term_values));
 
-        diffusion_term_values = py.numpy.array(diffusion_term_values, pyargs('dtype', py.numpy.float64));
-        source_term_values = py.numpy.array(source_term(points), pyargs('dtype', py.numpy.float64));
+        diffusion_term_values = m2py_float(diffusion_term_values);
+        source_term_values = m2py_float(source_term(points));
         
         % Compute local stiffness matrix
         local_a = equation.compute_cell_diffusion_matrix(diffusion_term_values, basis_functions_derivative_values, weights);
-        local_a = local_a + k_max * polydim.pde_tools.local_space_pcc_3_d.stabilization_matrix(reference_element_data, local_space_data);
+        local_a = local_a + k_max * local_space_pcc_3_d.stabilization_matrix(reference_element_data, local_space_data);
         local_a = double(local_a);
         
         % Compute local rhs
@@ -127,8 +124,8 @@ for ref=1:length(max_relative_volumes)
         global_do_fs = do_fs_data.cells_global_do_fs{cell_dimension}{cell_index};
 
         % Test slicing indices
-        global_dof_index = int64(py.numpy.array(do_fs_data_indices.cells_do_fs_global_index{cell_index}, pyargs('dtype', py.numpy.int64)))' + 1;
-        local_dof_index = int64(py.numpy.array(do_fs_data_indices.cells_do_fs_local_index{cell_index}, pyargs('dtype', py.numpy.int64)))' + 1;
+        global_dof_index = py2m_int(do_fs_data_indices.cells_do_fs_global_index{cell_index})' + 1;
+        local_dof_index = py2m_int(do_fs_data_indices.cells_do_fs_local_index{cell_index})' + 1;
 
         global_rhs(global_dof_index) = global_rhs(global_dof_index) + local_rhs(local_dof_index);
 
@@ -180,12 +177,12 @@ for ref=1:length(max_relative_volumes)
     for c = 1:num_cell3D
 
         cell_index = py.int(c - 1);
-        local_space_data = polydim.pde_tools.local_space_pcc_3_d.create_local_space(geometry_utilities_config.tolerance1_d, geometry_utilities_config.tolerance2_d, ...
+        local_space_data = local_space_pcc_3_d.create_local_space(geometry_utilities_config.tolerance1_d, geometry_utilities_config.tolerance2_d, ...
             geometry_utilities_config.tolerance3_d, mesh_geometric_data, cell_index, reference_element_data);
-        basis_functions_values = double(polydim.pde_tools.local_space_pcc_3_d.basis_functions_values(reference_element_data, local_space_data, polydim.vem.pcc.ProjectionTypes.pi0k));
-        basis_functions_derivative_values = polydim.pde_tools.local_space_pcc_3_d.basis_functions_derivative_values(reference_element_data, local_space_data);
+        basis_functions_values = double(local_space_pcc_3_d.basis_functions_values(reference_element_data, local_space_data, polydim.vem.pcc.ProjectionTypes.pi0k));
+        basis_functions_derivative_values = local_space_pcc_3_d.basis_functions_derivative_values(reference_element_data, local_space_data);
         basis_functions_derivative_values = {double(basis_functions_derivative_values{py.int(0)}), double(basis_functions_derivative_values{py.int(1)}), double(basis_functions_derivative_values{py.int(2)})};
-        cell3_d_internal_quadrature = polydim.pde_tools.local_space_pcc_3_d.internal_quadrature(reference_element_data, local_space_data);
+        cell3_d_internal_quadrature = local_space_pcc_3_d.internal_quadrature(reference_element_data, local_space_data);
 
         weights = double(cell3_d_internal_quadrature.weights);
         points = double(cell3_d_internal_quadrature.points);
@@ -245,9 +242,9 @@ for ref=1:length(max_relative_volumes)
 
         local_dof_i = local_do_fs{py.int(0)};
 
-        if local_dof_i.type == polydim.pde_tools.do_fs.DOFsManager.DOFsData.DOF.Types.strong
+        if local_dof_i.type == DOFsData.DOF.Types.strong
             cell0_ds_numeric(p) = solution_dirichlet(int64(local_dof_i.global_index) + 1);
-        elseif local_dof_i.type == polydim.pde_tools.do_fs.DOFsManager.DOFsData.DOF.Types.dof
+        elseif local_dof_i.type == DOFsData.DOF.Types.dof
             cell0_ds_numeric(p) = solution(int64(local_dof_i.global_index) + 1);
         else
             error("Unknown DOF Type");
@@ -255,10 +252,7 @@ for ref=1:length(max_relative_volumes)
     end
     
     file_name = strcat([char(export_path), '/Solution_', int2str(int64(method_type.value)), '_', int2str(int64(method_order)), '_', int2str(ref)]);
-    vtk_utilities.export_solution_3(file_name, ...
-        mesh, py.numpy.squeeze(py.numpy.array(cell0_ds_numeric, pyargs('dtype', py.numpy.float64))), py.numpy.squeeze(py.numpy.array(cell0_ds_exact, pyargs('dtype', py.numpy.float64))), ...
-        py.numpy.squeeze(py.numpy.array(cell3_ds_error_l2, pyargs('dtype', py.numpy.float64))), ...
-        py.numpy.squeeze(py.numpy.array(cell3_ds_error_h1, pyargs('dtype', py.numpy.float64))));
+    export_solution_3(file_name, mesh, cell0_ds_numeric, cell0_ds_exact, cell3_ds_error_l2, cell3_ds_error_h1);
 
     disp(strcat(['Export Solution in: ', file_name, '.vtu']))
 
