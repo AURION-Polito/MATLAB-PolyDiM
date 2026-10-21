@@ -1,4 +1,10 @@
-pyenv('Version', './.venv/bin/python','ExecutionMode','InProcess');
+if isfolder('./.venv/bin')
+    pyenv('Version', './.venv/bin/python','ExecutionMode','InProcess');
+elseif isfolder('./.venv/Scripts')
+    pyenv('Version', './.venv/Scripts/python','ExecutionMode','InProcess');
+else
+    error('venv not found')
+end
 pyrunfile("pybind11_builtins.py");
 
 pd = py.importlib.import_module('pypolydim');
